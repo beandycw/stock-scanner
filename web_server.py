@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Generator
 from services.stock_analyzer_service import StockAnalyzerService
 from services.us_stock_service_async import USStockServiceAsync
+from services.a_stock_service_async import AStockServiceAsync
+from services.hk_stock_service_async import HKStockServiceAsync
 from services.fund_service_async import FundServiceAsync
 import os
 import httpx
@@ -53,6 +55,8 @@ app.add_middleware(
 
 # 初始化异步服务
 us_stock_service = USStockServiceAsync()
+a_stock_service = AStockServiceAsync()
+hk_stock_service = HKStockServiceAsync()
 fund_service = FundServiceAsync()
 
 # 定义请求和响应模型
@@ -258,6 +262,38 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
         logger.error(error_msg)
         logger.exception(e)
         raise HTTPException(status_code=500, detail=error_msg)
+
+
+# 搜索A股代码
+@app.get("/api/search_a_stocks")
+async def search_a_stocks(keyword: str = "", username: str = Depends(verify_token)):
+    try:
+        if not keyword:
+            raise HTTPException(status_code=400, detail="请输入搜索关键词")
+        
+        # 直接使用异步服务的异步方法
+        results = await a_stock_service.search_stocks(keyword)
+        return {"results": results}
+        
+    except Exception as e:
+        logger.error(f"搜索A股代码时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 搜索港股代码
+@app.get("/api/search_hk_stocks")
+async def search_hk_stocks(keyword: str = "", username: str = Depends(verify_token)):
+    try:
+        if not keyword:
+            raise HTTPException(status_code=400, detail="请输入搜索关键词")
+        
+        # 直接使用异步服务的异步方法
+        results = await hk_stock_service.search_stocks(keyword)
+        return {"results": results}
+        
+    except Exception as e:
+        logger.error(f"搜索港股代码时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 搜索美股代码
 @app.get("/api/search_us_stocks")

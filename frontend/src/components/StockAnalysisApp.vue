@@ -37,7 +37,7 @@
                   />
                 </n-form-item>
                 
-                <n-form-item :label='marketType === "US" ? "股票搜索" : "基金搜索"' v-if="showSearch">
+                <n-form-item label="股票或基金搜索" v-if="showSearch">
                   <StockSearch :market-type="marketType" @select="addSelectedStock" />
                 </n-form-item>
                 
@@ -239,8 +239,8 @@ const showAnnouncement = (content: string) => {
 
 // 市场选项
 const marketOptions = [
-  { label: 'A股', value: 'A' },
-  { label: '港股', value: 'HK' },
+  { label: 'A股', value: 'A', showSearch: true },
+  { label: '港股', value: 'HK', showSearch: true },
   { label: '美股', value: 'US', showSearch: true },
   { label: 'ETF', value: 'ETF', showSearch: true  },
   { label: 'LOF', value: 'LOF', showSearch: true  }
