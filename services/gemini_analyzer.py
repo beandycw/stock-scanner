@@ -9,11 +9,11 @@ from utils.logger import get_logger
 from utils.api_utils import APIUtils
 from datetime import datetime
 from google import genai
-
+from services.ai_analyzer import AIAnalyzer
 # 获取日志器
 logger = get_logger()
 
-class GeminiAnalyzer:
+class GeminiAnalyzer(AIAnalyzer):
     """
     异步AI分析服务
     负责调用AI API对股票数据进行分析
@@ -204,10 +204,10 @@ class GeminiAnalyzer:
                 full_content = buffer
                 
                 # 尝试从分析内容中提取投资建议
-                recommendation = self._extract_recommendation(full_content)
+                recommendation = super()._extract_recommendation(full_content)
                 
                 # 计算分析评分
-                score = self._calculate_analysis_score(full_content, technical_summary)
+                score = super()._calculate_analysis_score(full_content, technical_summary)
                 
                 # 发送完成状态和评分、建议
                 yield json.dumps({
@@ -222,10 +222,10 @@ class GeminiAnalyzer:
                 analysis_text = response.text
 
                 # 尝试从分析内容中提取投资建议
-                recommendation = self._extract_recommendation(response.text)
+                recommendation = super()._extract_recommendation(response.text)
                 
                 # 计算分析评分
-                score = self._calculate_analysis_score(analysis_text, technical_summary)
+                score = super()._calculate_analysis_score(analysis_text, technical_summary)
                 
                 # 发送完整的分析结果
                 yield json.dumps({
@@ -250,74 +250,4 @@ class GeminiAnalyzer:
                 "error": f"分析出错: {str(e)}",
                 "status": "error"
             })
-            
-    def _extract_recommendation(self, analysis_text: str) -> str:
-        """从分析文本中提取投资建议"""
-        # 查找投资建议部分
-        investment_advice_pattern = r"##\s*投资建议\s*\n(.*?)(?:\n##|\Z)"
-        match = re.search(investment_advice_pattern, analysis_text, re.DOTALL)
         
-        if match:
-            advice_text = match.group(1).strip()
-            
-            # 提取关键建议
-            if "买入" in advice_text or "增持" in advice_text:
-                return "买入"
-            elif "卖出" in advice_text or "减持" in advice_text:
-                return "卖出"
-            elif "持有" in advice_text:
-                return "持有"
-            else:
-                return "观望"
-        
-        return "观望"  # 默认建议
-        
-    def _calculate_analysis_score(self, analysis_text: str, technical_summary: dict) -> int:
-        """计算分析评分"""
-        score = 50  # 基础分数
-        
-        # 根据技术指标调整分数
-        if technical_summary['trend'] == 'upward':
-            score += 10
-        else:
-            score -= 10
-            
-        if technical_summary['volume_trend'] == 'increasing':
-            score += 5
-        else:
-            score -= 5
-            
-        rsi = technical_summary['rsi_level']
-        if rsi < 30:  # 超卖
-            score += 15
-        elif rsi > 70:  # 超买
-            score -= 15
-            
-        # 根据分析文本中的关键词调整分数
-        if "强烈买入" in analysis_text or "显著上涨" in analysis_text:
-            score += 20
-        elif "买入" in analysis_text or "看涨" in analysis_text:
-            score += 10
-        elif "强烈卖出" in analysis_text or "显著下跌" in analysis_text:
-            score -= 20
-        elif "卖出" in analysis_text or "看跌" in analysis_text:
-            score -= 10
-            
-        # 确保分数在0-100范围内
-        return max(0, min(100, score))
-    
-    def _truncate_json_for_logging(self, json_obj, max_length=500):
-        """
-        截断JSON对象以便记录日志
-        
-        Args:
-            json_obj: JSON对象
-            max_length: 最大长度
-            
-        Returns:
-            截断后的字符串
-        """
-        json_str = json.dumps(json_obj, ensure_ascii=False)
-        if len(json_str) <= max_length:
-            return json_str
-        return json_str[:max_length] + "..." 
