@@ -211,7 +211,7 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
         async def generate_stream():
             if len(stock_codes) == 1:
                 # 单个股票分析流式处理
-                stock_code = stock_codes[0].strip()
+                stock_code = stock_codes[0].strip().upper()
                 logger.info(f"开始单股流式分析: {stock_code}")
                 
                 stock_code_json = json.dumps(stock_code)

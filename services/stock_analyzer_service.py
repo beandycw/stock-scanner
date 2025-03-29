@@ -6,6 +6,7 @@ from services.stock_data_provider import StockDataProvider
 from services.technical_indicator import TechnicalIndicator
 from services.stock_scorer import StockScorer
 from services.ai_analyzer import AIAnalyzer
+from services.gemini_analyzer import GeminiAnalyzer
 
 # 获取日志器
 logger = get_logger()
@@ -30,7 +31,7 @@ class StockAnalyzerService:
         self.data_provider = StockDataProvider()
         self.indicator = TechnicalIndicator()
         self.scorer = StockScorer()
-        self.ai_analyzer = AIAnalyzer(
+        self.ai_analyzer = GeminiAnalyzer(
             custom_api_url=custom_api_url,
             custom_api_key=custom_api_key,
             custom_api_model=custom_api_model,
