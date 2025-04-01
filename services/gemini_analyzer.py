@@ -54,7 +54,7 @@ class GeminiAnalyzer(AIAnalyzer):
             异步生成器，生成分析结果字符串
         """
         try:
-            logger.info(f"开始AI分析 {stock_code}, 流式模式: {stream}")
+            logger.info(f"开始AI分析 {stock_code}, 流式模式: {stream}, API_MODEL: {self.API_MODEL}")
             
             # 提取关键技术指标
             latest_data = df.iloc[-1]
