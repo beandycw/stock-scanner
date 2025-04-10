@@ -40,7 +40,7 @@ class StockAnalyzerService:
         
         logger.info("初始化StockAnalyzerService完成")
     
-    async def analyze_stock(self, stock_code: str, market_type: str = 'A', stream: bool = False) -> AsyncGenerator[str, None]:
+    async def analyze_stock(self, stock_code: str, market_type: str = 'A', stream: bool = False, stock_name: str='') -> AsyncGenerator[str, None]:
         """
         分析单只股票
         
@@ -163,7 +163,7 @@ class StockAnalyzerService:
             yield json.dumps(basic_result)
             
             # 使用AI进行深入分析
-            async for analysis_chunk in self.ai_analyzer.get_ai_analysis(df_with_indicators, stock_code, market_type, stream):
+            async for analysis_chunk in self.ai_analyzer.get_ai_analysis(df_with_indicators, stock_code, market_type, stream, stock_name):
                 yield analysis_chunk
                 
             logger.info(f"完成股票分析: {stock_code}")

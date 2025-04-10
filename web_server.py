@@ -53,6 +53,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if not os.path.exists('data'):
+    os.mkdir('data')
+
 # 初始化异步服务
 us_stock_service = USStockServiceAsync()
 a_stock_service = AStockServiceAsync()
@@ -222,11 +225,21 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                 init_message = f'{{"stream_type": "single", "stock_code": {stock_code_json}}}\n'
                 yield init_message
                 
-                logger.debug(f"开始处理股票 {stock_code} 的流式响应")
+                if market_type in ['ETF', 'LOF']:
+                    pass
+                elif market_type == 'US':
+                    stock_dict = await us_stock_service.get_us_stock_detail(stock_code)
+                elif market_type == 'HK':
+                    stock_dict = await hk_stock_service.get_stock_detail(stock_code)
+                else:
+                    stock_dict = await a_stock_service.get_stock_detail(stock_code)
+
+                stock_name = stock_dict['name']
+                logger.debug(f"开始处理股票 {stock_name}:{stock_code} 的流式响应")
                 chunk_count = 0
                 
                 # 使用异步生成器
-                async for chunk in custom_analyzer.analyze_stock(stock_code, market_type, stream=True):
+                async for chunk in custom_analyzer.analyze_stock(stock_code, market_type, stream=True, stock_name=stock_name):
                     chunk_count += 1
                     yield chunk + '\n'
                 
@@ -302,7 +315,7 @@ async def search_us_stocks(keyword: str = "", username: str = Depends(verify_tok
         if not keyword:
             raise HTTPException(status_code=400, detail="请输入搜索关键词")
         
-        # 直接使用异步服务的异步方法
+        # 直接使用异步服务的异步方法 
         results = await us_stock_service.search_us_stocks(keyword)
         return {"results": results}
         

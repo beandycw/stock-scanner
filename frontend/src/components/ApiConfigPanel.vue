@@ -268,7 +268,8 @@ const modelOptions = [
   { label: 'Gemini 1.5 Pro', key: 'gemini-1.5-pro' },
   { label: 'Gemini 1.5 Flash', key: 'gemini-1.5-flash' },
   { label: 'Gemini 2.0 Pro', key: 'gemini-2.0-pro' },
-  { label: 'Gemini 2.0 Flash', key: 'gemini-2.0-flash' }
+  { label: 'Gemini 2.0 Flash', key: 'gemini-2.0-flash' },
+  { label: 'Gemini 2.5 Pro', key: 'gemini-2.5-pro-exp-03-25' },
 ];
 
 // 常用模型（用于快速选择）
@@ -277,6 +278,7 @@ const commonModels = [
   { label: 'GPT-4o', key: 'gpt-4o' },
   { label: 'Claude 3.5', key: 'claude-3-5-sonnet' },
   { label: 'Gemini 2.0', key: 'gemini-2.0-flash' },
+  { label: 'Gemini 2.5', key: 'gemini-2.5-pro-exp-03-25' },
   { label: 'DeepSeek V3', key: 'deepseek-chat' },
 ];
 

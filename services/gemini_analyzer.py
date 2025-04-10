@@ -40,7 +40,7 @@ class GeminiAnalyzer(AIAnalyzer):
         
         logger.debug(f"初始化GeminiAnalyzer: API_URL={self.API_URL}, API_MODEL={self.API_MODEL}, API_KEY={'已提供' if self.API_KEY else '未提供'}, API_TIMEOUT={self.API_TIMEOUT}")
     
-    async def get_ai_analysis(self, df: pd.DataFrame, stock_code: str, market_type: str = 'A', stream: bool = False) -> AsyncGenerator[str, None]:
+    async def get_ai_analysis(self, df: pd.DataFrame, stock_code: str, market_type: str = 'A', stream: bool = False, stock_name:str='') -> AsyncGenerator[str, None]:
         """
         对股票数据进行AI分析
         
@@ -77,8 +77,8 @@ class GeminiAnalyzer(AIAnalyzer):
             volume_status = 'HIGH' if volume_ratio > 1.5 else ('LOW' if volume_ratio < 0.5 else 'NORMAL')
             
             # AI 分析内容
-            # 最近14天的股票数据记录
-            recent_data = df.tail(14).to_dict('records')
+            # 最近30天的股票数据记录
+            recent_data = df.tail(30).to_dict('records')
             
             # 包含trend, volatility, volume_trend, rsi_level的字典
             technical_summary = {
@@ -91,12 +91,12 @@ class GeminiAnalyzer(AIAnalyzer):
             # 根据市场类型调整分析提示
             if market_type in ['ETF', 'LOF']:
                 prompt = f"""
-                分析基金 {stock_code}：
+                分析基金 {stock_name} {stock_code}：
 
                 技术指标概要：
                 {technical_summary}
                 
-                近14日交易数据：
+                近30日交易数据：
                 {recent_data}
                 
                 请提供：
@@ -111,12 +111,12 @@ class GeminiAnalyzer(AIAnalyzer):
                 """
             elif market_type == 'US':
                 prompt = f"""
-                分析美股 {stock_code}：
+                分析美股 {stock_name} {stock_code}：
 
                 技术指标概要：
                 {technical_summary}
                 
-                近14日交易数据：
+                近30日交易数据：
                 {recent_data}
                 
                 请提供：
@@ -131,12 +131,12 @@ class GeminiAnalyzer(AIAnalyzer):
                 """
             elif market_type == 'HK':
                 prompt = f"""
-                分析港股 {stock_code}：
+                分析港股 {stock_name} {stock_code}：
 
                 技术指标概要：
                 {technical_summary}
                 
-                近14日交易数据：
+                近30日交易数据：
                 {recent_data}
                 
                 请提供：
@@ -150,13 +150,14 @@ class GeminiAnalyzer(AIAnalyzer):
                 请基于技术指标和港股市场特点进行分析，给出具体数据支持。
                 """
             else:  # A股
+
                 prompt = f"""
-                分析A股 {stock_code}：
+                分析A股 {stock_name} {stock_code}：
 
                 技术指标概要：
                 {technical_summary}
                 
-                近14日交易数据：
+                近30日交易数据：
                 {recent_data}
                 
                 请提供：
@@ -174,6 +175,8 @@ class GeminiAnalyzer(AIAnalyzer):
             analysis_date = datetime.now().strftime("%Y-%m-%d")
             client = genai.Client(api_key=self.API_KEY)
 
+            # logger.debug(prompt)
+            
             if stream:
                 buffer = ""
                 chunk_count = 0

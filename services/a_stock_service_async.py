@@ -1,3 +1,4 @@
+import os
 import asyncio
 import pandas as pd
 from typing import List, Dict, Any, Optional
@@ -18,10 +19,21 @@ class AStockServiceAsync:
         logger.debug("初始化AStockServiceAsync")
         
         # 可选：添加缓存以减少频繁请求
+        self.cache_file = 'data/all_a_stock.csv'
         self.cache = None
         self.cache_timestamp = None
         self.cache_duration = timedelta(days=5)
-    
+
+        if os.path.exists(self.cache_file):
+            df = pd.read_csv(self.cache_file, dtype={'symbol': str})
+            if len('日期') > 0:
+                str_date = df['日期'].iloc[0]
+                df.pop('日期')
+                self.cache = df 
+                date_format = '%Y-%m-%d %H:%M:%S'
+                self.cache_timestamp = datetime.strptime(str_date, date_format)
+                logger.info(f'A股缓存数据，日期：{str(self.cache_timestamp)}')
+
     async def search_stocks(self, keyword: str) -> List[Dict[str, Any]]:
         """
         异步搜索A股代码
@@ -35,17 +47,7 @@ class AStockServiceAsync:
         try:
             logger.info(f"异步搜索A: {keyword}")
             
-                        # 检查缓存是否有效
-            now = datetime.now()
-            if self.cache is None or (now - self.cache_timestamp) > self.cache_duration:
-                # 使用线程池执行同步的akshare调用
-                logger.debug(f"从API获取A股所有数据")
-                df = await asyncio.to_thread(self._get_all_stocks_data)
-                self.cache = df
-                self.cache_timestamp = now
-            else:
-                df = self.cache
-                logger.debug("使用A股所有数据缓存数据")
+            df = await asyncio.to_thread(self._get_all_stocks_data)
 
             # 模糊匹配搜索
             mask = df['name'].str.contains(keyword, case=False, na=False)
@@ -81,6 +83,13 @@ class AStockServiceAsync:
         import akshare as ak
         
         try:
+            now = datetime.now()
+            if self.cache is not None and (now - self.cache_timestamp) < self.cache_duration:
+                logger.debug("使用A股所有数据缓存数据")
+                return self.cache
+            
+            logger.debug(f"从API获取A股所有数据")
+
             # 获取A股数据
             df = ak.stock_info_a_code_name()
             
@@ -92,6 +101,11 @@ class AStockServiceAsync:
 
             # 删除 'name' 列中字符串开头和结尾的空格
             df['name'] = df['name'].str.replace(' ', '')
+            df['日期'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            df.to_csv(self.cache_file, index=False)
+            df.pop('日期')
+            self.cache = df
+            self.cache_timestamp = now
             return df
             
         except Exception as e:
@@ -111,13 +125,10 @@ class AStockServiceAsync:
         try:
             # 获取A股数据
             df = ak.stock_individual_info_em(symbol=symbol)
-            
-            # 转换列名
-            # TODO: 需要根据实际情况转换列名
-            df = df.rename(columns={
-                "code": "symbol",
-                "name": "name",
-            })
+            #    item                value
+            # 0  股票代码               000858
+            # 1  股票简称                五 粮 液
+            # 2   总股本         3881608005.0
             
             return df
             
@@ -141,21 +152,16 @@ class AStockServiceAsync:
             logger.info(f"获取A股详情: {symbol}")
             
             # 使用线程池执行同步的akshare调用
-            df = await asyncio.to_thread(self._get_stocks_data_detail)
-            
-            # 精确匹配股票代码
-            result = df[df['symbol'] == symbol]
-            
+            df = await asyncio.to_thread(self._get_all_stocks_data)
+            result = df.loc[df['symbol'] == symbol]
             if len(result) == 0:
-                raise Exception(f"未找到股票代码: {symbol}")
-            
-            # 获取第一行数据
-            row = result.iloc[0]
-            
+                raise Exception(f"未找到股票代码{symbol}的股票简称")
+            stock_name = result['name'].values[0]
+
             # 格式化为字典
             stock_detail = {
-                'name': row['name'] if pd.notna(row['name']) else '',
-                'symbol': str(row['symbol']) if pd.notna(row['symbol']) else '',
+                'symbol': symbol,
+                'name': stock_name
                 # 'price': float(row['price']) if pd.notna(row['price']) else 0.0,
                 # 'price_change': float(row['price_change']) if pd.notna(row['price_change']) else 0.0,
                 # 'price_change_percent': float(row['price_change_percent'].strip('%'))/100 if pd.notna(row['price_change_percent']) else 0.0,
