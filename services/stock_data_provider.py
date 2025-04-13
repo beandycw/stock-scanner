@@ -71,6 +71,9 @@ class StockDataProvider:
                     end_date=end_date,
                     adjust="qfq"
                 )
+            elif market_type in ['CB']:
+                logger.debug(f"获取可转债数据: {stock_code}")
+                df = ak.bond_zh_hs_daily(stock_code.lower())
                 
             elif market_type in ['HK']:
                 logger.debug(f"获取港股数据: {stock_code}")
@@ -209,6 +212,8 @@ class StockDataProvider:
                 # 根据实际数据结构调整列名映射
                 # 实际数据列：['日期', '股票代码', '开盘', '收盘', '最高', '最低', '成交量', '成交额', '振幅', '涨跌幅', '涨跌额', '换手率']
                 df.columns = ['Date', 'Code', 'Open', 'Close', 'High', 'Low', 'Volume', 'Amount', 'Amplitude', 'Change_pct', 'Change', 'Turnover']
+            elif market_type in ['CB']:
+                df.columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
             elif market_type in ['HK', 'US']:
                 # 美股数据列可能不同，需要通过映射处理
                 columns_mapping = {
@@ -233,12 +238,11 @@ class StockDataProvider:
                         new_df[new_col] = 0.0
                 
                 # 替换原始df
-                df = new_df
-                
+                df = new_df              
             elif market_type in ['ETF', 'LOF']:
                 # 基金数据可能有不同的列
                 df.columns = ['Date', 'Open', 'Close', 'High', 'Low', 'Volume', 'Amount', 'Amplitude', 'Change_pct', 'Change', 'Turnover']
-                
+            
             # 确保日期列是日期类型
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'])

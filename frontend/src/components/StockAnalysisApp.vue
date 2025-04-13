@@ -243,7 +243,8 @@ const marketOptions = [
   { label: '港股', value: 'HK', showSearch: true },
   { label: '美股', value: 'US', showSearch: true },
   { label: 'ETF', value: 'ETF', showSearch: true  },
-  { label: 'LOF', value: 'LOF', showSearch: true  }
+  { label: 'LOF', value: 'LOF', showSearch: true  },
+  { label: '可转债', value: 'CB', showSearch: true  },
 ];
 
 // 表格列定义

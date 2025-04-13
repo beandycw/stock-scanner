@@ -11,7 +11,8 @@ export enum MarketType {
   HK = 'HK',    // 港股
   US = 'US',    // 美股
   ETF = 'ETF',  // ETF基金
-  LOF = 'LOF'   // LOF基金
+  LOF = 'LOF',  // LOF基金
+  CB = 'CB'     // 可转债
 }
 
 /**
@@ -97,7 +98,14 @@ export const validateStockCode = (
         };
       }
       break;
-      
+    case MarketType.CB:
+        if (!validateAStock()) {
+          return { 
+            valid: false, 
+            errorMessage: `无效的可转债代码格式: ${code}。美股代码应为1-5位字母` 
+          };
+        }
+        break;
     case MarketType.ETF:
     case MarketType.LOF:
       if (!validateFund(code)) {

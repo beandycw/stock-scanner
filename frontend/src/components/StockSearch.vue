@@ -96,11 +96,16 @@ const debouncedSearch = debounce(async (keyword: string) => {
       const searchResults = await apiService.searchUsStocks(keyword);
       // 限制只显示前10个结果
       results.value = searchResults.slice(0, 10);
+    } else if (props.marketType === 'CB') {
+      // 可转债搜索
+      const searchResults = await apiService.searchBonds(keyword);
+      // 限制只显示前10个结果
+      results.value = searchResults.slice(0, 10);
     } else {
       // 基金搜索
       const searchResults = await apiService.searchFunds(keyword);
-      // 限制只显示前10个结果
-      results.value = searchResults.slice(0, 10);
+    // 限制只显示前10个结果
+    results.value = searchResults.slice(0, 10);
     }
   } catch (error) {
     console.error('搜索数据时出错:', error);

@@ -155,6 +155,19 @@ export const apiService = {
     }
   },
   
+  // 搜索可转债
+  searchBonds: async (keyword: string): Promise<SearchResult[]> => {
+      try {
+        const response = await axiosInstance.get('/search_bonds', {
+          params: { keyword }
+        });
+        return response.data.results || [];
+      } catch (error) {
+        console.error('搜索可转债时出错:', error);
+        return [];
+      }
+    },
+
   // 获取配置
   getConfig: async () => {
     try {

@@ -10,6 +10,7 @@ from services.us_stock_service_async import USStockServiceAsync
 from services.a_stock_service_async import AStockServiceAsync
 from services.hk_stock_service_async import HKStockServiceAsync
 from services.fund_service_async import FundServiceAsync
+from services.cb_stock_service_async import CBStockServiceAsync
 import os
 import httpx
 import asyncio
@@ -62,6 +63,7 @@ us_stock_service = USStockServiceAsync()
 a_stock_service = AStockServiceAsync()
 hk_stock_service = HKStockServiceAsync()
 fund_service = FundServiceAsync()
+bond_service = CBStockServiceAsync()
 
 # 定义请求和响应模型
 class AnalyzeRequest(BaseModel):
@@ -232,9 +234,11 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                     stock_dict = await us_stock_service.get_us_stock_detail(stock_code)
                 elif market_type == 'HK':
                     stock_dict = await hk_stock_service.get_stock_detail(stock_code)
+                elif market_type == 'CB':
+                    stock_dict = await bond_service.get_bond_detail(stock_code)
                 else:
                     stock_dict = await a_stock_service.get_stock_detail(stock_code)
-
+ 
                 stock_name = stock_dict['name']
                 logger.debug(f"开始处理股票 {stock_name}:{stock_code} 的流式响应")
                 chunk_count = 0
@@ -346,6 +350,21 @@ async def search_funds(keyword: str = "", market_type: str = "", username: str =
         logger.error(f"搜索基金代码时出错: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# 搜索基金代码
+@app.get("/api/search_bonds")
+async def search_bonds(keyword: str = "", market_type: str = "", username: str = Depends(verify_token)):
+    try:
+        if not keyword:
+            raise HTTPException(status_code=400, detail="请输入搜索关键词")
+        
+        # 直接使用异步服务的异步方法
+        results = await bond_service.search_bonds(keyword)
+        return {"results": results}
+        
+    except Exception as e:
+        logger.error(f"搜索可转债代码时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # 获取美股详情
 @app.get("/api/us_stock_detail/{symbol}")
 async def get_us_stock_detail(symbol: str, username: str = Depends(verify_token)):
