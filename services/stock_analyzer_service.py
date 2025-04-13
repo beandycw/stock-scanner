@@ -1,5 +1,7 @@
+import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
 from typing import List, AsyncGenerator
 from utils.logger import get_logger
 from services.stock_data_provider import StockDataProvider
@@ -31,12 +33,34 @@ class StockAnalyzerService:
         self.data_provider = StockDataProvider()
         self.indicator = TechnicalIndicator()
         self.scorer = StockScorer()
-        self.ai_analyzer = GeminiAnalyzer(
-            custom_api_url=custom_api_url,
-            custom_api_key=custom_api_key,
-            custom_api_model=custom_api_model,
-            custom_api_timeout=custom_api_timeout
-        )
+
+        load_dotenv()
+
+        gemini_model = 'gemini'
+        if custom_api_model is not None and custom_api_model.lower().startswith(gemini_model):
+            self.ai_analyzer = GeminiAnalyzer(
+                custom_api_url=custom_api_url,
+                custom_api_key=custom_api_key,
+                custom_api_model=custom_api_model,
+                custom_api_timeout=custom_api_timeout
+            )
+            logger.info("从用户选项中决策使用Gemini AI分析器。")
+        elif str(os.getenv('API_MODEL')).lower().startswith(gemini_model):
+            self.ai_analyzer = GeminiAnalyzer(
+                custom_api_url=custom_api_url,
+                custom_api_key=custom_api_key,
+                custom_api_model=custom_api_model,
+                custom_api_timeout=custom_api_timeout
+            )
+            logger.info("从环境变量中决策使用Gemini AI分析器。")
+        else:
+            self.ai_analyzer = AIAnalyzer(
+                custom_api_url=custom_api_url,
+                custom_api_key=custom_api_key,
+                custom_api_model=custom_api_model,
+                custom_api_timeout=custom_api_timeout
+            )
+            logger.info("使用通用AI分析器。")
         
         logger.info("初始化StockAnalyzerService完成")
     
