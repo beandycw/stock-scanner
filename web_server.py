@@ -12,6 +12,7 @@ from services.hk_stock_service_async import HKStockServiceAsync
 from services.fund_service_async import FundServiceAsync
 import os
 import httpx
+import asyncio
 from utils.logger import get_logger
 from utils.api_utils import APIUtils
 from dotenv import load_dotenv
@@ -242,6 +243,7 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                 async for chunk in custom_analyzer.analyze_stock(stock_code, market_type, stream=True, stock_name=stock_name):
                     chunk_count += 1
                     yield chunk + '\n'
+                    await asyncio.sleep(0.001)
                 
                 logger.info(f"股票 {stock_code} 流式分析完成，共发送 {chunk_count} 个块")
             else:
@@ -264,12 +266,18 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                 ):
                     chunk_count += 1
                     yield chunk + '\n'
+                    await asyncio.sleep(0.001)
                 
                 logger.info(f"批量流式分析完成，共发送 {chunk_count} 个块")
         
         logger.info("成功创建流式响应生成器")
-        return StreamingResponse(generate_stream(), media_type='application/json')
-            
+        headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no'  # 禁用Nginx缓冲
+        }
+        return StreamingResponse(generate_stream(), media_type='text/event-stream', headers=headers)
+ 
     except Exception as e:
         error_msg = f"分析时出错: {str(e)}"
         logger.error(error_msg)

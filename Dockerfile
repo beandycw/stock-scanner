@@ -45,6 +45,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     ca-certificates \
+    vim \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 从构建阶段复制Python依赖
