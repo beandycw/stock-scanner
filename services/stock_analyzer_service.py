@@ -72,7 +72,7 @@ class StockAnalyzerService:
             stock_code: 股票代码
             market_type: 市场类型，默认为'A'股
             stream: 是否使用流式响应
-            
+            stock_name: 股票名称
         Returns:
             异步生成器，生成分析结果的JSON字符串
         """
@@ -198,12 +198,13 @@ class StockAnalyzerService:
             logger.exception(e)
             yield json.dumps({"error": error_msg})
     
-    async def scan_stocks(self, stock_codes: List[str], market_type: str = 'A', min_score: int = 0, stream: bool = False) -> AsyncGenerator[str, None]:
+    async def scan_stocks(self, stock_codes: List[str], stock_names: List[str], market_type: str = 'A', min_score: int = 0, stream: bool = False) -> AsyncGenerator[str, None]:
         """
         批量扫描股票
         
         Args:
             stock_codes: 股票代码列表
+            stock_names: 股票代码列表
             market_type: 市场类型
             min_score: 最低评分阈值
             stream: 是否使用流式响应
@@ -281,6 +282,8 @@ class StockAnalyzerService:
                 top_stocks = filtered_results[:5]
                 
                 for stock_code, score, _ in top_stocks:
+                    index = stock_codes.index(stock_code)
+                    stock_name = stock_names[index]
                     df = stock_with_indicators.get(stock_code)
                     if df is not None:
                         # 输出正在分析的股票信息
@@ -290,7 +293,7 @@ class StockAnalyzerService:
                         })
                         
                         # AI分析
-                        async for analysis_chunk in self.ai_analyzer.get_ai_analysis(df, stock_code, market_type, stream):
+                        async for analysis_chunk in self.ai_analyzer.get_ai_analysis(df, stock_code, market_type, stream,stock_name):
                             yield analysis_chunk
             
             # 输出扫描完成信息

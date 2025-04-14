@@ -49,12 +49,13 @@ class GeminiAnalyzer(AIAnalyzer):
             stock_code: 股票代码
             market_type: 市场类型，默认为'A'股
             stream: 是否使用流式响应
+            stock_name: 股票名称
             
         Returns:
             异步生成器，生成分析结果字符串
         """
         try:
-            logger.info(f"开始AI分析 {stock_code}, 流式模式: {stream}, API_MODEL: {self.API_MODEL}")
+            logger.info(f"开始AI分析 {stock_name} {stock_code}, 流式模式: {stream}, API_MODEL: {self.API_MODEL}")
             
             # 提取关键技术指标
             latest_data = df.iloc[-1]

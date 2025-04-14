@@ -261,9 +261,27 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                 logger.debug(f"开始处理批量股票的流式响应")
                 chunk_count = 0
                 
+                stock_names = []
+                for code in stock_codes:
+                    stock_code = code.strip().upper()
+                    if market_type in ['ETF', 'LOF']:
+                        pass
+                    elif market_type == 'US':
+                        stock_dict = await us_stock_service.get_us_stock_detail(stock_code)
+                    elif market_type == 'HK':
+                        stock_dict = await hk_stock_service.get_stock_detail(stock_code)
+                    elif market_type == 'CB':
+                        stock_dict = await bond_service.get_bond_detail(stock_code)
+                    else:
+                        stock_dict = await a_stock_service.get_stock_detail(stock_code)
+    
+                    stock_name = stock_dict['name']
+                    stock_names.append(stock_name)
+
                 # 使用异步生成器
                 async for chunk in custom_analyzer.scan_stocks(
-                    [code.strip() for code in stock_codes], 
+                    [code.strip().upper() for code in stock_codes], 
+                    stock_names,
                     min_score=0, 
                     market_type=market_type,
                     stream=True
