@@ -19,11 +19,34 @@ class FundServiceAsync:
         logger.debug("初始化FundServiceAsync")
         
         # 添加缓存
-        self._etf_cache = None
-        self._lof_cache = None
-        self._cache_timestamp = None
-        self._cache_duration = timedelta(minutes=30)  # 缓存30分钟
-    
+        self.etf_cache_file = 'data/all_etf_stock.csv'
+        self.lof_cache_file = 'data/all_lof_stock.csv'
+        self.etf_cache = None
+        self.lof_cache = None
+        self.etf_cache_timestamp = None
+        self.lof_cache_timestamp = None
+        self.cache_duration = timedelta(days=5)  # 缓存30分钟
+
+        if os.path.exists(self.etf_cache_file):
+            df = pd.read_csv(self.etf_cache_file, dtype={'symbol': str})
+            if len('日期') > 0:
+                str_date = df['日期'].iloc[0]
+                df.pop('日期')
+                self.etf_cache = df 
+                date_format = '%Y-%m-%d %H:%M:%S'
+                self.etf_cache_timestamp = datetime.strptime(str_date, date_format)
+                logger.info(f'ETF缓存数据，日期：{str(self.etf_cache_timestamp)}')
+
+        if os.path.exists(self.lof_cache_file):
+            df = pd.read_csv(self.lof_cache_file, dtype={'symbol': str})
+            if len('日期') > 0:
+                str_date = df['日期'].iloc[0]
+                df.pop('日期')
+                self.lof_cache = df 
+                date_format = '%Y-%m-%d %H:%M:%S'
+                self.lof_cache_timestamp = datetime.strptime(str_date, date_format)
+                logger.info(f'LOF缓存数据，日期：{str(self.lof_cache_timestamp)}')
+
     async def search_funds(self, keyword: str, market_type: str = 'ETF') -> List[Dict[str, Any]]:
         """
         异步搜索基金代码
@@ -58,7 +81,7 @@ class FundServiceAsync:
                     'total_value': float(row['total_value']) if pd.notna(row['total_value']) else 0.0,
                 })
                 # 限制只返回前10个结果
-                if len(formatted_results) >= 10:
+                if len(formatted_results) >= 20:
                     break
             
             logger.info(f"基金搜索完成，找到 {len(formatted_results)} 个匹配项（限制显示前10个）")
@@ -80,19 +103,17 @@ class FundServiceAsync:
         Returns:
             包含基金数据的DataFrame
         """
-        # 检查缓存是否有效
+
         now = datetime.now()
-        cache_valid = (
-            self._cache_timestamp is not None and 
-            (now - self._cache_timestamp) < self._cache_duration
-        )
-        
-        if market_type == 'ETF' and cache_valid and self._etf_cache is not None:
-            logger.debug("使用ETF缓存数据")
-            return self._etf_cache
-        elif market_type == 'LOF' and cache_valid and self._lof_cache is not None:
-            logger.debug("使用LOF缓存数据")
-            return self._lof_cache
+        if market_type == 'ETF':
+            if self.etf_cache is not None and (now - self.etf_cache_timestamp) < self.cache_duration:
+                logger.debug("使用ETF所有数据缓存数据")
+                return self.etf_cache
+
+        if market_type == 'LOF':
+            if self.lof_cache is not None and (now - self.lof_cache_timestamp) < self.cache_duration:
+                logger.debug("使用LOF所有数据缓存数据")
+                return self.lof_cache
         
         # 缓存无效，重新获取数据
         try:
@@ -101,12 +122,19 @@ class FundServiceAsync:
             # 使用线程池执行同步的akshare调用
             if market_type == 'ETF':
                 df = await asyncio.to_thread(self._get_etf_data)
-                self._etf_cache = df
+                df['日期'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                df.to_csv(self.etf_cache_file, index=False)
+                df.pop('日期')
+                self.etf_cache = df
+                self.etf_cache_timestamp = now
             else:
                 df = await asyncio.to_thread(self._get_lof_data)
-                self._lof_cache = df
-                
-            self._cache_timestamp = now
+                df['日期'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                df.to_csv(self.lof_cache_file, index=False)
+                df.pop('日期')
+                self.lof_cache = df
+                self.lof_cache_timestamp = now
+            
             return df
             
         except Exception as e:
@@ -170,7 +198,6 @@ class FundServiceAsync:
                 "成交量": "volume",
                 "流通市值": "market_value",
                 "总市值": "total_value",
-                "基金折价率": "discount_rate",
             })
             
             return df
@@ -212,11 +239,10 @@ class FundServiceAsync:
                 'symbol': str(row['symbol']) if pd.notna(row['symbol']) else '',
                 'price': float(row['price']) if pd.notna(row['price']) else 0.0,
                 'price_change': float(row['price_change']) if pd.notna(row['price_change']) else 0.0,
-                'price_change_percent': float(row['price_change_percent'].strip('%'))/100 if pd.notna(row['price_change_percent']) else 0.0,
+                'price_change_percent': float(row['price_change_percent'])/100 if pd.notna(row['price_change_percent']) else 0.0,
                 'volume': float(row['volume']) if pd.notna(row['volume']) else 0.0,
                 'market_value': float(row['market_value']) if pd.notna(row['market_value']) else 0.0,
-                'total_value': float(row['total_value']) if pd.notna(row['total_value']) else 0.0,
-                'discount_rate': float(row['discount_rate'].strip('%'))/100 if pd.notna(row['discount_rate']) else 0.0
+                'total_value': float(row['total_value']) if pd.notna(row['total_value']) else 0.0
             }
             
             logger.info(f"获取基金详情成功: {symbol}")

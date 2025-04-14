@@ -141,11 +141,24 @@ export const apiService = {
       return [];
     }
   },
-
-  // 搜索基金
-  searchFunds: async (keyword: string): Promise<SearchResult[]> => {
+  
+  // 搜索ETF基金
+  searchFundsETF: async (keyword: string): Promise<SearchResult[]> => {
     try {
-      const response = await axiosInstance.get('/search_funds', {
+      const response = await axiosInstance.get('/search_funds_etf', {
+        params: { keyword }
+      });
+      return response.data.results || [];
+    } catch (error) {
+      console.error('搜索基金时出错:', error);
+      return [];
+    }
+  },
+
+  // 搜索LOF基金
+  searchFundsLOF: async (keyword: string): Promise<SearchResult[]> => {
+    try {
+      const response = await axiosInstance.get('/search_funds_lof', {
         params: { keyword }
       });
       return response.data.results || [];

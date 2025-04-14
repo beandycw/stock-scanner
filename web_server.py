@@ -219,17 +219,11 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
         
         # 定义流式生成器
         async def generate_stream():
-            if len(stock_codes) == 1:
-                # 单个股票分析流式处理
-                stock_code = stock_codes[0].strip().upper()
-                logger.info(f"开始单股流式分析: {stock_code}")
-                
-                stock_code_json = json.dumps(stock_code)
-                init_message = f'{{"stream_type": "single", "stock_code": {stock_code_json}}}\n'
-                yield init_message
-                
+            stock_names = []
+            for code in stock_codes:
+                stock_code = code.strip().upper()
                 if market_type in ['ETF', 'LOF']:
-                    pass
+                    stock_dict = await fund_service.get_fund_detail(stock_code, market_type)
                 elif market_type == 'US':
                     stock_dict = await us_stock_service.get_us_stock_detail(stock_code)
                 elif market_type == 'HK':
@@ -238,8 +232,20 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                     stock_dict = await bond_service.get_bond_detail(stock_code)
                 else:
                     stock_dict = await a_stock_service.get_stock_detail(stock_code)
- 
+
                 stock_name = stock_dict['name']
+                stock_names.append(stock_name)
+                
+            if len(stock_codes) == 1:
+                # 单个股票分析流式处理
+                stock_name = stock_names[0]
+                stock_code = stock_codes[0].strip().upper()
+                logger.info(f"开始单股流式分析: {stock_code}")
+                
+                stock_code_json = json.dumps(stock_code)
+                init_message = f'{{"stream_type": "single", "stock_code": {stock_code_json}}}\n'
+                yield init_message
+                
                 logger.debug(f"开始处理股票 {stock_name}:{stock_code} 的流式响应")
                 chunk_count = 0
                 
@@ -260,23 +266,6 @@ async def analyze(request: AnalyzeRequest, username: str = Depends(verify_token)
                 
                 logger.debug(f"开始处理批量股票的流式响应")
                 chunk_count = 0
-                
-                stock_names = []
-                for code in stock_codes:
-                    stock_code = code.strip().upper()
-                    if market_type in ['ETF', 'LOF']:
-                        pass
-                    elif market_type == 'US':
-                        stock_dict = await us_stock_service.get_us_stock_detail(stock_code)
-                    elif market_type == 'HK':
-                        stock_dict = await hk_stock_service.get_stock_detail(stock_code)
-                    elif market_type == 'CB':
-                        stock_dict = await bond_service.get_bond_detail(stock_code)
-                    else:
-                        stock_dict = await a_stock_service.get_stock_detail(stock_code)
-    
-                    stock_name = stock_dict['name']
-                    stock_names.append(stock_name)
 
                 # 使用异步生成器
                 async for chunk in custom_analyzer.scan_stocks(
@@ -353,22 +342,37 @@ async def search_us_stocks(keyword: str = "", username: str = Depends(verify_tok
         logger.error(f"搜索美股代码时出错: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 搜索基金代码
-@app.get("/api/search_funds")
-async def search_funds(keyword: str = "", market_type: str = "", username: str = Depends(verify_token)):
+# 搜索ETF基金代码
+@app.get("/api/search_funds_etf")
+async def search_funds_etf(keyword: str = "", username: str = Depends(verify_token)):
     try:
         if not keyword:
             raise HTTPException(status_code=400, detail="请输入搜索关键词")
-        
+
         # 直接使用异步服务的异步方法
-        results = await fund_service.search_funds(keyword, market_type)
+        results = await fund_service.search_funds(keyword, 'ETF') 
         return {"results": results}
         
     except Exception as e:
         logger.error(f"搜索基金代码时出错: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 搜索基金代码
+# 搜索LOF基金代码
+@app.get("/api/search_funds_lof")
+async def search_funds_lof(keyword: str = "", username: str = Depends(verify_token)):
+    try:
+        if not keyword:
+            raise HTTPException(status_code=400, detail="请输入搜索关键词")
+
+        # 直接使用异步服务的异步方法
+        results = await fund_service.search_funds(keyword, 'LOF')
+        return {"results": results}
+        
+    except Exception as e:
+        logger.error(f"搜索基金代码时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# 搜索可转债代码
 @app.get("/api/search_bonds")
 async def search_bonds(keyword: str = "", market_type: str = "", username: str = Depends(verify_token)):
     try:
